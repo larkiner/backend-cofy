@@ -15,9 +15,9 @@
 -- El hash es BCrypt (mismo algoritmo que usa la app).
 -- ============================================================
 
--- 1) Elige una sucursal existente para asignar al admin:
---    SELECT id, nombre FROM CAFETERIA_APP.SUCURSALES;
--- Sustituye <SUCURSAL_ID> abajo por ese id.
+-- Asigna al admin la primera sucursal ACTIVA (o cualquiera si no hay
+-- activas). No hay que rellenar nada a mano. Para verlas antes:
+--    SELECT id, nombre, estado FROM CAFETERIA_APP.SUCURSALES;
 
 INSERT INTO CAFETERIA_APP.TRABAJADORES
         (ID, NOMBRE, EMAIL, TELEFONO, PASSWORD_HASH, ROL, SUCURSAL_ID)
@@ -27,9 +27,14 @@ VALUES  (CAFETERIA_APP.SEQ_TRABAJADORES.NEXTVAL,
          NULL,
          '$2a$10$3PztDPZMnQx7byoSPnH7G.MqFeN2b8x4znBVvTvIK4b9/IrANTJQi',
          'ADMIN',
-         <SUCURSAL_ID>);
+         COALESCE(
+             (SELECT MIN(ID) FROM CAFETERIA_APP.SUCURSALES WHERE ESTADO = 'ACTIVA'),
+             (SELECT MIN(ID) FROM CAFETERIA_APP.SUCURSALES)));
 
 COMMIT;
+
+-- Alternativa: si quieres una sucursal concreta, reemplaza el bloque
+-- COALESCE(...) por el numero de id, p. ej.  1
 
 -- Nota: si la tabla TRABAJADORES tiene un trigger BEFORE INSERT que
 -- asigna el ID automaticamente, quita la columna ID y su NEXTVAL del
