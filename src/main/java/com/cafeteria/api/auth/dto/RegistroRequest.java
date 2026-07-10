@@ -19,13 +19,6 @@ public record RegistroRequest(
 
         @NotBlank(message = "La contraseña es obligatoria")
         @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres")
-        String password,
-
-        /**
-         * Solo aplica cuando la contraseña es la clave de empleado/admin:
-         * sucursal a la que queda asignado el trabajador. Si viene null,
-         * se usa la primera sucursal activa.
-         */
-        Long sucursalId
+        String password
 ) {
 }

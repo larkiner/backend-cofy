@@ -53,7 +53,7 @@ Algunas entidades son proyecciones de solo lectura sobre vistas de Oracle, marca
 - Toda la autorización está centralizada en la cadena `authorizeHttpRequests` de `SecurityConfig`, por patrón de URL — **no hay `@PreAuthorize`/`@Secured`** en ninguna parte del código. Al agregar un endpoint nuevo, la regla de acceso se añade ahí, no en el método del controller.
 - `Authentication.getName()` en los controllers es el email del usuario; los servicios vuelven a buscar la fila de cliente/trabajador por email en cada llamada en vez de confiar en un principal más rico.
 
-**Regla de registro no obvia** (`RegistroService.registrar`): el destino de un registro se decide comparando la contraseña enviada contra dos valores "mágicos" de configuración, `app.registro.password-empleado` / `app.registro.password-admin`. Si coincide con alguno, se crea silenciosamente un `TRABAJADOR` (BARISTA o ADMIN) en vez de un `CLIENTE`, usando esa misma cadena como su contraseña inicial (hasheada con BCrypt) — se espera que la cambien después vía `PUT /api/auth/password`. Es intencional (documentado en el Javadoc de la clase) pero fácil de romper sin querer al tocar `RegistroService`.
+**Modelo de registro:** el registro público (`POST /api/auth/registro`, `RegistroService`) crea **siempre** un `CLIENTE`. El personal (BARISTA/CAJERO/SUPERVISOR/ADMIN) lo da de alta un **ADMIN** vía `POST /api/interno/trabajadores` (`TrabajadorAdminService`, restringido a `hasRole("ADMIN")` en `SecurityConfig`), eligiendo el rol explícitamente. Ya no existe la "clave mágica" de registro. Como el primer admin no puede crearse por API (no hay admin todavía), se siembra a mano con [db/seed_primer_admin.sql](db/seed_primer_admin.sql).
 
 ### Dos flujos de pedido que convergen en una sola cola
 
