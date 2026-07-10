@@ -22,24 +22,26 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
+    private final RegistroService registroService;
+    private final SesionService sesionService;
+    private final PasswordService passwordService;
 
     @PostMapping("/registro")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse registrar(@Valid @RequestBody RegistroRequest request) {
-        return authService.registrar(request);
+        return registroService.registrar(request);
     }
 
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+        return sesionService.login(request);
     }
 
     /** Revoca el token actual: deja de servir aunque no haya expirado. */
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
-        authService.cerrarSesion(authorization);
+        sesionService.cerrarSesion(authorization);
     }
 
     /** Cambio de contraseña del usuario autenticado (cliente o personal). */
@@ -47,8 +49,6 @@ public class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cambiarPassword(Authentication authentication,
                                 @Valid @RequestBody CambioPasswordRequest request) {
-        String rol = authentication.getAuthorities().iterator().next()
-                .getAuthority().replaceFirst("^ROLE_", "");
-        authService.cambiarPassword(authentication.getName(), rol, request);
+        passwordService.cambiarPassword(authentication.getName(), request);
     }
 }

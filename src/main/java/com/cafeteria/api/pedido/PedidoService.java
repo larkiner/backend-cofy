@@ -1,8 +1,6 @@
 package com.cafeteria.api.pedido;
 
 import com.cafeteria.api.cliente.ClienteAuthRepository;
-import com.cafeteria.api.interno.pedido.PagoInterno;
-import com.cafeteria.api.interno.pedido.PagoInternoRepository;
 import com.cafeteria.api.menu.MenuItem;
 import com.cafeteria.api.menu.MenuRepository;
 import com.cafeteria.api.pedido.dto.CrearPedidoRequest;
@@ -18,7 +16,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -31,8 +28,9 @@ public class PedidoService {
     private final MenuRepository menuRepository;
     private final SucursalActivaRepository sucursalActivaRepository;
     private final ClienteAuthRepository clienteAuthRepository;
-    // Repositorio del datasource INTERNO: solo lo usa la pasarela simulada
-    private final PagoInternoRepository pagoInternoRepository;
+    // Abstracción de la pasarela de pagos (DIP): PedidoService no sabe
+    // si detrás hay una simulación o una pasarela real.
+    private final PasarelaPago pasarelaPago;
 
     /**
      * Crea el pedido con su detalle en una sola transacción.
@@ -100,26 +98,14 @@ public class PedidoService {
     }
 
     /**
-     * SIMULACIÓN de la pasarela de pagos: aprueba el pago pendiente.
-     * En producción esto sería un webhook que llama la pasarela real.
-     * Al aprobarse, el trigger TRG_PAGOS_APROBADO de Oracle genera el
-     * código de retiro y pasa el pedido a PAGADO.
+     * Confirma el pago del pedido delegando en la pasarela (DIP). Al
+     * aprobarse, el trigger TRG_PAGOS_APROBADO de Oracle genera el código
+     * de retiro y pasa el pedido a PAGADO; por eso se relee al final.
      */
     public PedidoClienteVista confirmarPago(String emailCliente, Long pedidoId) {
         pedidoDelCliente(emailCliente, pedidoId); // valida propiedad
 
-        PagoInterno pago = pagoInternoRepository.findByPedidoId(pedidoId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                        "El pedido no tiene un pago registrado"));
-
-        if (!"PENDIENTE".equals(pago.getEstado())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El pago ya fue procesado (estado: " + pago.getEstado() + ")");
-        }
-
-        pago.setEstado("APROBADO");
-        pago.setReferenciaTransaccion("SIM-" + UUID.randomUUID());
-        pagoInternoRepository.save(pago);
+        pasarelaPago.aprobarPago(pedidoId);
 
         // Releer: el trigger ya generó el código de retiro
         return pedidoClienteVistaRepository.findById(pedidoId)

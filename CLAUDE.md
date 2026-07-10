@@ -40,7 +40,7 @@ Algunas entidades son proyecciones de solo lectura sobre vistas de Oracle, marca
 
 ### Autenticación: login unificado, JWT, rol en el claim
 
-`auth/` es código compartido que habla con **ambos** datasources (tiene inyectados tanto `ClienteAuthRepository` como `TrabajadorAuthRepository`). No hay una abstracción de "usuario" de Spring Security más allá de un claim del JWT:
+`auth/` es código compartido que habla con **ambos** datasources. Está dividido por responsabilidad (SRP): `RegistroService` (alta de cuentas), `SesionService` (login + logout), `PasswordService` (cambio de contraseña) y `CredencialService` — el único lugar que sabe distinguir cliente de trabajador al buscar/verificar credenciales, de modo que agregar un tercer tipo de cuenta solo toca esa clase (OCP). No hay una abstracción de "usuario" de Spring Security más allá de un claim del JWT:
 
 - `JwtService` firma/parsea tokens HS256 con un claim `rol` (nombres de rol: `CLIENTE`, `BARISTA`, `CAJERO`, `SUPERVISOR`, `ADMIN`).
 - `JwtAuthFilter` lee `Authorization: Bearer <token>` y, si es válido, deja un `UsernamePasswordAuthenticationToken` en el contexto con una única authority `ROLE_<rol>`. Sin token (o inválido) la petición sigue como anónima, y las rutas protegidas devuelven 401 (no 403) vía el `authenticationEntryPoint` en `SecurityConfig`.
@@ -48,11 +48,11 @@ Algunas entidades son proyecciones de solo lectura sobre vistas de Oracle, marca
 - Toda la autorización está centralizada en la cadena `authorizeHttpRequests` de `SecurityConfig`, por patrón de URL — **no hay `@PreAuthorize`/`@Secured`** en ninguna parte del código. Al agregar un endpoint nuevo, la regla de acceso se añade ahí, no en el método del controller.
 - `Authentication.getName()` en los controllers es el email del usuario; los servicios vuelven a buscar la fila de cliente/trabajador por email en cada llamada en vez de confiar en un principal más rico.
 
-**Regla de registro no obvia** (`AuthService.registrar`): el destino de un registro se decide comparando la contraseña enviada contra dos valores "mágicos" de configuración, `app.registro.password-empleado` / `app.registro.password-admin`. Si coincide con alguno, se crea silenciosamente un `TRABAJADOR` (BARISTA o ADMIN) en vez de un `CLIENTE`, usando esa misma cadena como su contraseña inicial (hasheada con BCrypt) — se espera que la cambien después vía `PUT /api/auth/password`. Es intencional (documentado en el Javadoc de la clase) pero fácil de romper sin querer al tocar `AuthService`.
+**Regla de registro no obvia** (`RegistroService.registrar`): el destino de un registro se decide comparando la contraseña enviada contra dos valores "mágicos" de configuración, `app.registro.password-empleado` / `app.registro.password-admin`. Si coincide con alguno, se crea silenciosamente un `TRABAJADOR` (BARISTA o ADMIN) en vez de un `CLIENTE`, usando esa misma cadena como su contraseña inicial (hasheada con BCrypt) — se espera que la cambien después vía `PUT /api/auth/password`. Es intencional (documentado en el Javadoc de la clase) pero fácil de romper sin querer al tocar `RegistroService`.
 
 ### Dos flujos de pedido que convergen en una sola cola
 
-- **Pedidos en línea** (`pedido/` en el datasource cliente): `PedidoService.crear` → `pagar` (registra un `Pago`, el pedido queda `PENDIENTE_PAGO`) → `confirmarPago` simula el callback de una pasarela de pago cambiando la fila `PagoInterno` correspondiente (en el datasource **empleado** — `PedidoService` es una de las pocas clases que cruza ambos datasources) a `APROBADO`.
+- **Pedidos en línea** (`pedido/` en el datasource cliente): `PedidoService.crear` → `pagar` (registra un `Pago`, el pedido queda `PENDIENTE_PAGO`) → `confirmarPago` delega en la abstracción `PasarelaPago` (DIP). Hoy la implementa `PasarelaPagoSimulada` (en `interno/pedido/`, datasource **empleado**), que aprueba el pago en el acto; para conectar una pasarela real se agrega otra implementación sin tocar `PedidoService`.
 - **Ventas de mostrador** (`interno/venta/`, `VentaMostradorService`, solo datasource empleado): el personal arma el pedido y se cobra en la misma petición — el `PagoVenta` se inserta ya `APROBADO`, sin paso de confirmación aparte.
 
 En ambos casos, un trigger de Oracle (`TRG_PAGOS_APROBADO`) — no código de la aplicación — genera el código de retiro (`codigo_retiro`) y pasa el pedido a `PAGADO` cuando una fila de pago queda `APROBADO`. Después de escribir/aprobar un pago, el código vuelve a leer la fila del pedido en vez de construir en Java el estado post-trigger.
