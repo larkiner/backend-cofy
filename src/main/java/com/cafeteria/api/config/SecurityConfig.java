@@ -3,6 +3,7 @@ package com.cafeteria.api.config;
 import com.cafeteria.api.auth.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -39,6 +40,10 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
+    /** Orígenes permitidos del frontend (separados por coma, configurables por entorno). */
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -49,6 +54,10 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // ---------- Público ----------
+                // /error debe ser público: si no, cualquier error (p. ej. una
+                // validación 400) en una petición sin token se reenvía a /error,
+                // vuelve a pasar por seguridad y se enmascara como 401 sin cuerpo.
+                .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/menu/**", "/api/auth/**", "/api/sucursales/**").permitAll()
                 // ---------- Clientes ----------
                 .requestMatchers("/api/clientes/**", "/api/pedidos/**").hasRole("CLIENTE")
@@ -81,7 +90,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:4200"));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

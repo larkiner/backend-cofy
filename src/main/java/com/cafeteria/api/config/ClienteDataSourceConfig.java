@@ -3,6 +3,7 @@ package com.cafeteria.api.config;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,9 @@ import java.util.Properties;
         transactionManagerRef = "clienteTransactionManager")
 public class ClienteDataSourceConfig {
 
+    @Value("${app.jpa.show-sql:false}")
+    private boolean showSql;
+
     @Bean
     @Primary
     @ConfigurationProperties("app.datasource.cliente")
@@ -51,8 +55,8 @@ public class ClienteDataSourceConfig {
                 "com.cafeteria.api.sucursal",
                 "com.cafeteria.api.pedido");
         emf.setPersistenceUnitName("cliente");
-        emf.setJpaVendorAdapter(vendorAdapter());
-        emf.setJpaProperties(jpaProperties());
+        emf.setJpaVendorAdapter(vendorAdapter(showSql));
+        emf.setJpaProperties(jpaProperties(showSql));
         return emf;
     }
 
@@ -63,17 +67,17 @@ public class ClienteDataSourceConfig {
         return new JpaTransactionManager(emf);
     }
 
-    static HibernateJpaVendorAdapter vendorAdapter() {
+    static HibernateJpaVendorAdapter vendorAdapter(boolean showSql) {
         var adapter = new HibernateJpaVendorAdapter();
-        adapter.setShowSql(true);
+        adapter.setShowSql(showSql);
         return adapter;
     }
 
-    static Properties jpaProperties() {
+    static Properties jpaProperties(boolean showSql) {
         var props = new Properties();
         // Las tablas/vistas viven en el esquema CAFETERIA_APP
         props.put("hibernate.default_schema", "CAFETERIA_APP");
-        props.put("hibernate.format_sql", "true");
+        props.put("hibernate.format_sql", String.valueOf(showSql));
         return props;
     }
 }

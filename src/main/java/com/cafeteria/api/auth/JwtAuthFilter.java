@@ -30,6 +30,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final InvalidacionSesionService invalidacionSesionService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -49,6 +50,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 String email = claims.getSubject();
                 String rol = claims.get("rol", String.class);
+
+                if (invalidacionSesionService.tokenInvalidado(email, claims.getIssuedAt())) {
+                    throw new JwtException("Token invalidado (cambio de contraseña)");
+                }
 
                 var authentication = new UsernamePasswordAuthenticationToken(
                         email,

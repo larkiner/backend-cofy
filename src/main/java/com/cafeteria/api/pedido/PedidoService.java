@@ -9,6 +9,7 @@ import com.cafeteria.api.pedido.dto.PedidoCreadoResponse;
 import com.cafeteria.api.pedido.dto.PedidoDetalleResponse;
 import com.cafeteria.api.sucursal.SucursalActivaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,14 @@ public class PedidoService {
     // Abstracción de la pasarela de pagos (DIP): PedidoService no sabe
     // si detrás hay una simulación o una pasarela real.
     private final PasarelaPago pasarelaPago;
+
+    /**
+     * Si false, el cliente NO puede autoconfirmar su pago (endpoint solo
+     * de desarrollo). En producción debe ir en false: la aprobación real
+     * llega por webhook de la pasarela, no desde el cliente.
+     */
+    @Value("${app.pagos.simulacion-habilitada:true}")
+    private boolean simulacionHabilitada;
 
     /**
      * Crea el pedido con su detalle en una sola transacción.
@@ -103,6 +112,11 @@ public class PedidoService {
      * de retiro y pasa el pedido a PAGADO; por eso se relee al final.
      */
     public PedidoClienteVista confirmarPago(String emailCliente, Long pedidoId) {
+        if (!simulacionHabilitada) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "La confirmación de pago simulada está deshabilitada en este entorno");
+        }
+
         pedidoDelCliente(emailCliente, pedidoId); // valida propiedad
 
         pasarelaPago.aprobarPago(pedidoId);

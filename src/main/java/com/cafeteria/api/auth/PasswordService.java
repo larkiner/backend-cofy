@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 public class PasswordService {
 
     private final CredencialService credencialService;
+    private final InvalidacionSesionService invalidacionSesionService;
     private final ClienteRepository clienteRepository;
     private final TrabajadorRepository trabajadorRepository;
     private final PasswordEncoder passwordEncoder;
@@ -35,12 +36,15 @@ public class PasswordService {
 
         if (CredencialService.ROL_CLIENTE.equals(creds.rol())) {
             clienteRepository.actualizarPasswordHash(creds.id(), nuevoHash);
-            return;
+        } else {
+            Trabajador trabajador = trabajadorRepository.findById(creds.id())
+                    .orElseThrow(CredencialService::credencialesInvalidas);
+            trabajador.setPasswordHash(nuevoHash);
+            trabajadorRepository.save(trabajador);
         }
 
-        Trabajador trabajador = trabajadorRepository.findById(creds.id())
-                .orElseThrow(CredencialService::credencialesInvalidas);
-        trabajador.setPasswordHash(nuevoHash);
-        trabajadorRepository.save(trabajador);
+        // Al cambiar la contraseña, cualquier token emitido antes deja de
+        // servir: se cierran todas las sesiones activas (incluida la actual).
+        invalidacionSesionService.invalidarSesionesDe(creds.email());
     }
 }

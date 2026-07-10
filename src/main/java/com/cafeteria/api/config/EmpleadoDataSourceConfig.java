@@ -3,6 +3,7 @@ package com.cafeteria.api.config;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,9 @@ import org.springframework.transaction.PlatformTransactionManager;
         transactionManagerRef = "empleadoTransactionManager")
 public class EmpleadoDataSourceConfig {
 
+    @Value("${app.jpa.show-sql:false}")
+    private boolean showSql;
+
     @Bean
     @ConfigurationProperties("app.datasource.empleado")
     public HikariDataSource empleadoDataSource() {
@@ -36,8 +40,8 @@ public class EmpleadoDataSourceConfig {
         emf.setDataSource(empleadoDataSource());
         emf.setPackagesToScan("com.cafeteria.api.interno");
         emf.setPersistenceUnitName("empleado");
-        emf.setJpaVendorAdapter(ClienteDataSourceConfig.vendorAdapter());
-        emf.setJpaProperties(ClienteDataSourceConfig.jpaProperties());
+        emf.setJpaVendorAdapter(ClienteDataSourceConfig.vendorAdapter(showSql));
+        emf.setJpaProperties(ClienteDataSourceConfig.jpaProperties(showSql));
         return emf;
     }
 
