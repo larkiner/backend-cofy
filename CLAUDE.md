@@ -17,6 +17,8 @@ Este archivo guía a Claude Code (claude.ai/code) cuando trabaja con código en 
 
 En Windows fuera de Git Bash, usar `gradlew.bat` en vez de `./gradlew`.
 
+**Antes de arrancar:** la app resuelve los secretos (contraseñas de BD, secreto JWT, claves de registro) desde variables de entorno o desde `./secrets.properties` (gitignored). Sin esos valores **no arranca** (fail-closed). Para desarrollo, copiar `secrets.properties.example` a `secrets.properties` y rellenarlo. `application.properties` ya no contiene secretos, solo referencias `${VAR}`.
+
 Este repo no tiene Flyway/Liquibase — el esquema de Oracle, las vistas, los triggers y los grants por rol se crean con scripts SQL externos (mencionados en comentarios como "Script 4", "Script 6", etc.) que viven fuera de este código. La API asume que ese esquema ya existe. Debe haber una instancia de Oracle accesible en `//localhost:1521/XEPDB1` (ver `application.properties`) para que la app arranque o para tests que toquen algún datasource.
 
 ## Arquitectura
@@ -45,6 +47,9 @@ Algunas entidades son proyecciones de solo lectura sobre vistas de Oracle, marca
 - `JwtService` firma/parsea tokens HS256 con un claim `rol` (nombres de rol: `CLIENTE`, `BARISTA`, `CAJERO`, `SUPERVISOR`, `ADMIN`).
 - `JwtAuthFilter` lee `Authorization: Bearer <token>` y, si es válido, deja un `UsernamePasswordAuthenticationToken` en el contexto con una única authority `ROLE_<rol>`. Sin token (o inválido) la petición sigue como anónima, y las rutas protegidas devuelven 401 (no 403) vía el `authenticationEntryPoint` en `SecurityConfig`.
 - `POST /api/auth/logout` revoca el token actual: `TokenBlacklistService` mantiene en memoria el `jti` de cada token deslogueado hasta su expiración natural, y `JwtAuthFilter` lo rechaza como inválido a partir de ahí. Es en memoria a propósito (no hay tabla para esto en el esquema externo y la API corre en una sola instancia) — si se despliega con más de una instancia hay que reemplazarlo por un almacén compartido.
+- Cambiar la contraseña invalida **todos** los tokens previos de ese usuario: `PasswordService` llama a `InvalidacionSesionService` (marca en memoria un "inválido antes de T" por email) y `JwtAuthFilter` rechaza los tokens con `iat` anterior. Misma limitación de memoria que la blacklist.
+- Rate limiting en `/api/auth/**` (`RateLimitingFilter`, ventana fija en memoria por IP) contra fuerza bruta de credenciales y de las claves de registro.
+- Errores: `ApiExceptionHandler` (`@RestControllerAdvice`) devuelve un JSON uniforme con el mensaje de negocio y los errores de validación; nunca expone el stack trace. `/error` es público (si no, un error en una petición sin token se enmascara como 401 vacío). El flag `app.pagos.simulacion-habilitada` debe ir en `false` en producción para que el cliente no pueda autoconfirmar su pago.
 - Toda la autorización está centralizada en la cadena `authorizeHttpRequests` de `SecurityConfig`, por patrón de URL — **no hay `@PreAuthorize`/`@Secured`** en ninguna parte del código. Al agregar un endpoint nuevo, la regla de acceso se añade ahí, no en el método del controller.
 - `Authentication.getName()` en los controllers es el email del usuario; los servicios vuelven a buscar la fila de cliente/trabajador por email en cada llamada en vez de confiar en un principal más rico.
 
