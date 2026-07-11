@@ -5,6 +5,8 @@ build/
 ### Secretos (nunca versionar) ###
 secrets.properties
 *.env
+.env
+!.env.example
 
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/

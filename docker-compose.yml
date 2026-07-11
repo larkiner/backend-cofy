@@ -1,0 +1,58 @@
+# ============================================================
+# docker-compose para cafeteria-api
+#
+# Uso:
+#   1. Copia .env.example a .env y rellena los secretos.
+#   2. docker compose up --build
+#
+# Por defecto la API se conecta a un Oracle EXTERNO (el que ya
+# tenga el esquema CAFETERIA_APP, las vistas, triggers, roles y
+# los usuarios CAFETERIA_CLIENTE_APP / CAFETERIA_EMPLEADO_APP).
+# Indica su ubicacion con DB_HOST / DB_SERVICE en el .env.
+#
+# Para levantar tambien un Oracle local de conveniencia:
+#   docker compose --profile with-db up --build
+# OJO: ese Oracle arranca VACIO. Debes cargar los scripts de
+# esquema externos (Script 4, 6, ...) ademas de los de ./db,
+# o la app no funcionara.
+# ============================================================
+services:
+  api:
+    build: .
+    image: cafeteria-api:latest
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Dentro de la red de compose el Oracle local se llama "oracle".
+      # Si usas un Oracle externo, sobreescribe DB_HOST en el .env.
+      DB_HOST: ${DB_HOST:-oracle:1521}
+      DB_SERVICE: ${DB_SERVICE:-XEPDB1}
+    restart: unless-stopped
+
+  # -----------------------------------------------------------
+  # Oracle local OPCIONAL (perfil "with-db"). Imagen gratuita
+  # de gvenzl en Docker Hub. Arranca vacio: hay que cargar el
+  # esquema. Los .sql de ./db se ejecutan al inicializar.
+  # -----------------------------------------------------------
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    profiles: ["with-db"]
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD:-oracle}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./db:/container-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+    restart: unless-stopped
+
+volumes:
+  oracle-data:

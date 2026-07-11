@@ -17,6 +17,15 @@ Este archivo guía a Claude Code (claude.ai/code) cuando trabaja con código en 
 
 En Windows fuera de Git Bash, usar `gradlew.bat` en vez de `./gradlew`.
 
+```bash
+# Docker (ver Dockerfile / docker-compose.yml)
+cp .env.example .env      # y rellenar los secretos
+docker compose up --build             # API contra un Oracle externo (DB_HOST en .env)
+docker compose --profile with-db up --build   # + un Oracle local vacio de conveniencia
+```
+
+La imagen es multi-stage (build con JDK 21 + runtime con JRE 21, usuario no-root). El build **salta los tests** porque `contextLoads` es `@SpringBootTest` y necesita Oracle vivo. Los secretos y la config de BD se inyectan por variables de entorno (nunca se copian a la imagen; `secrets.properties` y `.env` estan en `.dockerignore`).
+
 **Antes de arrancar:** la app resuelve los secretos (contraseñas de BD, secreto JWT, claves de registro) desde variables de entorno o desde `./secrets.properties` (gitignored). Sin esos valores **no arranca** (fail-closed). Para desarrollo, copiar `secrets.properties.example` a `secrets.properties` y rellenarlo. `application.properties` ya no contiene secretos, solo referencias `${VAR}`.
 
 Este repo no tiene Flyway/Liquibase — el esquema de Oracle, las vistas, los triggers y los grants por rol se crean con scripts SQL externos (mencionados en comentarios como "Script 4", "Script 6", etc.) que viven fuera de este código. La API asume que ese esquema ya existe. Debe haber una instancia de Oracle accesible en `//localhost:1521/XEPDB1` (ver `application.properties`) para que la app arranque o para tests que toquen algún datasource.
