@@ -28,6 +28,9 @@ public class EmpleadoDataSourceConfig {
     @Value("${app.jpa.show-sql:false}")
     private boolean showSql;
 
+    @Value("${app.jpa.default-schema:CAFETERIA_APP}")
+    private String defaultSchema;
+
     @Bean
     @ConfigurationProperties("app.datasource.empleado")
     public HikariDataSource empleadoDataSource() {
@@ -41,7 +44,7 @@ public class EmpleadoDataSourceConfig {
         emf.setPackagesToScan("com.cafeteria.api.interno");
         emf.setPersistenceUnitName("empleado");
         emf.setJpaVendorAdapter(ClienteDataSourceConfig.vendorAdapter(showSql));
-        emf.setJpaProperties(ClienteDataSourceConfig.jpaProperties(showSql));
+        emf.setJpaProperties(ClienteDataSourceConfig.jpaProperties(showSql, defaultSchema));
         return emf;
     }
 

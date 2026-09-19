@@ -4,6 +4,7 @@ import com.cafeteria.api.pedido.PasarelaPago;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
@@ -23,8 +24,9 @@ public class PasarelaPagoSimulada implements PasarelaPago {
     private final PagoInternoRepository pagoInternoRepository;
 
     @Override
+    @Transactional("empleadoTransactionManager")
     public void aprobarPago(Long pedidoId) {
-        PagoInterno pago = pagoInternoRepository.findByPedidoId(pedidoId)
+        PagoInterno pago = pagoInternoRepository.findByPedidoIdForUpdate(pedidoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                         "El pedido no tiene un pago registrado"));
 

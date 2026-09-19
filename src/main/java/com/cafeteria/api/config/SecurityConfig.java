@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -50,6 +51,21 @@ public class SecurityConfig {
             // API REST sin sesiones de servidor: CSRF no aplica
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
+            // Cabeceras de seguridad. La API solo devuelve JSON, nunca HTML que
+            // ejecute scripts, asi que una CSP "default-src 'none'" es segura y
+            // reduce el impacto de un XSS. X-Content-Type-Options: nosniff y
+            // X-Frame-Options: DENY vienen ademas por defecto de Spring Security.
+            .headers(headers -> headers
+                .contentSecurityPolicy(csp -> csp.policyDirectives(
+                    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"))
+                .referrerPolicy(ref -> ref.policy(
+                    ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                .frameOptions(frame -> frame.deny())
+                // HSTS: el navegador solo hablara por HTTPS (surte efecto cuando
+                // la API se sirve tras TLS; inofensivo en HTTP de desarrollo).
+                .httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .maxAgeInSeconds(31_536_000)))
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
@@ -58,6 +74,7 @@ public class SecurityConfig {
                 // validación 400) en una petición sin token se reenvía a /error,
                 // vuelve a pasar por seguridad y se enmascara como 401 sin cuerpo.
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/api/pagos/stripe/webhook").permitAll()
                 .requestMatchers("/api/menu/**", "/api/auth/**", "/api/sucursales/**").permitAll()
                 // ---------- Clientes ----------
                 .requestMatchers("/api/clientes/**", "/api/pedidos/**").hasRole("CLIENTE")
