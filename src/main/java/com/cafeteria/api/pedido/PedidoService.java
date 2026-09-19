@@ -9,6 +9,7 @@ import com.cafeteria.api.pedido.dto.PedidoCreadoResponse;
 import com.cafeteria.api.pedido.dto.PedidoDetalleResponse;
 import com.cafeteria.api.sucursal.SucursalActivaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,13 +36,14 @@ public class PedidoService {
     // Abstracción de la pasarela de pagos (DIP): PedidoService no sabe
     // si detrás hay una simulación o una pasarela real.
     private final PasarelaPago pasarelaPago;
+    private final StripePaymentService stripePaymentService;
 
     /**
      * Si false, el cliente NO puede autoconfirmar su pago (endpoint solo
      * de desarrollo). En producción debe ir en false: la aprobación real
      * llega por webhook de la pasarela, no desde el cliente.
      */
-    @Value("${app.pagos.simulacion-habilitada:true}")
+    @Value("${app.pagos.simulacion-habilitada:false}")
     private boolean simulacionHabilitada;
 
     /**
@@ -53,13 +58,25 @@ public class PedidoService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "La sucursal no existe o no está activa"));
 
+        // Una sola consulta para todos los ítems (en vez de una por ítem):
+        // el precio se sigue releyendo siempre del menú en la BD, solo que
+        // en lote.
+        List<Long> productoIds = request.items().stream()
+                .map(ItemPedidoRequest::productoId)
+                .distinct()
+                .toList();
+        Map<Long, MenuItem> menuPorProducto = menuRepository.findAllById(productoIds).stream()
+                .collect(Collectors.toMap(MenuItem::getProductoId, Function.identity()));
+
         BigDecimal total = BigDecimal.ZERO;
         var detalles = new java.util.ArrayList<DetallePedido>();
 
         for (ItemPedidoRequest item : request.items()) {
-            MenuItem producto = menuRepository.findById(item.productoId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "El producto " + item.productoId() + " no existe o no está disponible"));
+            MenuItem producto = menuPorProducto.get(item.productoId());
+            if (producto == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "El producto " + item.productoId() + " no existe o no está disponible");
+            }
 
             var detalle = new DetallePedido();
             detalle.setProductoId(producto.getProductoId());
@@ -103,7 +120,16 @@ public class PedidoService {
         pago.setPedidoId(pedidoId);
         pago.setMetodoPago(metodo);
         pago.setMonto(pedido.getTotal());
-        pagoRepository.save(pago);
+        try {
+            // UQ_PAGOS_PEDIDO es la última línea de defensa cuando dos pestañas
+            // intentan pagar el mismo pedido a la vez. Forzamos el INSERT aquí
+            // para devolver un 409 útil, en lugar de un 500 al cerrar la
+            // transacción.
+            pagoRepository.saveAndFlush(pago);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El pedido ya tiene un pago registrado", ex);
+        }
     }
 
     /**
@@ -125,6 +151,12 @@ public class PedidoService {
         return pedidoClienteVistaRepository.findById(pedidoId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+    }
+
+    /** Inicia el cobro con Stripe; la aprobación llega después por webhook. */
+    public com.cafeteria.api.pedido.dto.StripePaymentIntentResponse iniciarPagoStripe(
+            String emailCliente, Long pedidoId) {
+        return stripePaymentService.crearIntent(emailCliente, pedidoId);
     }
 
     @Transactional(value = "clienteTransactionManager", readOnly = true)

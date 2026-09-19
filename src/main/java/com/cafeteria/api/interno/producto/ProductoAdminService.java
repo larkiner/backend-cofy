@@ -1,8 +1,10 @@
 package com.cafeteria.api.interno.producto;
 
+import com.cafeteria.api.config.CacheConfig;
 import com.cafeteria.api.interno.producto.dto.CategoriaRequest;
 import com.cafeteria.api.interno.producto.dto.ProductoRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,9 @@ public class ProductoAdminService {
         return productoRepository.findAllByOrderByCategoriaIdAscNombreAsc();
     }
 
+    // Las altas/cambios de producto invalidan el caché público del menú
+    // (VW_MENU), que el lado cliente sirve cacheado.
+    @CacheEvict(value = CacheConfig.CACHE_MENU, allEntries = true)
     @Transactional("empleadoTransactionManager")
     public Producto crearProducto(ProductoRequest request) {
         validarCategoria(request.categoriaId());
@@ -34,6 +39,7 @@ public class ProductoAdminService {
         return productoRepository.save(producto);
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_MENU, allEntries = true)
     @Transactional("empleadoTransactionManager")
     public Producto actualizarProducto(Long id, ProductoRequest request) {
         Producto producto = productoRepository.findById(id)

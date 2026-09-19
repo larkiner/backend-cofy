@@ -21,7 +21,7 @@ services:
     build: .
     image: cafeteria-api:latest
     ports:
-      - "${SERVER_PORT:-8080}:8080"
+      - "${HOST_PORT:-8080}:${SERVER_PORT:-8080}"
     env_file:
       - path: .env
         required: false

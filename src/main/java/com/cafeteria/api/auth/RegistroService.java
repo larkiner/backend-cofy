@@ -32,6 +32,8 @@ public class RegistroService {
                     "Ya existe una cuenta con ese email");
         }
 
+        PoliticaPassword.validar(request.password());
+
         Cliente cliente = new Cliente();
         cliente.setNombre(request.nombre().trim());
         cliente.setEmail(email);

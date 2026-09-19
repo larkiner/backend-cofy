@@ -30,7 +30,7 @@ public class Cliente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_clientes")
-    @SequenceGenerator(name = "seq_clientes", sequenceName = "CAFETERIA_APP.SEQ_CLIENTES", allocationSize = 1)
+    @SequenceGenerator(name = "seq_clientes", sequenceName = "CAFETERIA_APP.SEQ_CLIENTES", allocationSize = 20)
     private Long id;
 
     private String nombre;
