@@ -31,7 +31,7 @@ public class PagoVenta {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_pagos_venta")
-    @SequenceGenerator(name = "seq_pagos_venta", sequenceName = "CAFETERIA_APP.SEQ_PAGOS", allocationSize = 1)
+    @SequenceGenerator(name = "seq_pagos_venta", sequenceName = "CAFETERIA_APP.SEQ_PAGOS", allocationSize = 20)
     @Column(name = "ID")
     private Long id;
 

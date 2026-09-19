@@ -26,7 +26,7 @@ public class Producto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_productos")
-    @SequenceGenerator(name = "seq_productos", sequenceName = "CAFETERIA_APP.SEQ_PRODUCTOS", allocationSize = 1)
+    @SequenceGenerator(name = "seq_productos", sequenceName = "CAFETERIA_APP.SEQ_PRODUCTOS", allocationSize = 20)
     @Column(name = "ID")
     private Long id;
 

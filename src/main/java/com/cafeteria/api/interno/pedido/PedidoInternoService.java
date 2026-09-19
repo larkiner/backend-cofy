@@ -46,7 +46,7 @@ public class PedidoInternoService {
 
     @Transactional("empleadoTransactionManager")
     public PedidoInterno cambiarEstado(Long pedidoId, String nuevoEstado) {
-        PedidoInterno pedido = pedidoInternoRepository.findById(pedidoId)
+        PedidoInterno pedido = pedidoInternoRepository.findByIdForUpdate(pedidoId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Pedido no encontrado"));
 
@@ -64,7 +64,7 @@ public class PedidoInternoService {
     @Transactional("empleadoTransactionManager")
     public PedidoInterno entregar(String codigoRetiro, String emailEmpleado) {
         PedidoInterno pedido = pedidoInternoRepository
-                .findByCodigoRetiro(codigoRetiro.trim().toUpperCase())
+                .findByCodigoRetiroForUpdate(codigoRetiro.trim().toUpperCase())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Código de retiro no válido"));
 

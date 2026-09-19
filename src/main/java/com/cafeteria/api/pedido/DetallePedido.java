@@ -26,7 +26,7 @@ public class DetallePedido {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_detalle_pedido")
-    @SequenceGenerator(name = "seq_detalle_pedido", sequenceName = "CAFETERIA_APP.SEQ_DETALLE_PEDIDO", allocationSize = 1)
+    @SequenceGenerator(name = "seq_detalle_pedido", sequenceName = "CAFETERIA_APP.SEQ_DETALLE_PEDIDO", allocationSize = 20)
     @Column(name = "ID")
     private Long id;
 

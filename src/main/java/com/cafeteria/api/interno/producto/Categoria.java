@@ -21,7 +21,7 @@ public class Categoria {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_categorias")
-    @SequenceGenerator(name = "seq_categorias", sequenceName = "CAFETERIA_APP.SEQ_CATEGORIAS", allocationSize = 1)
+    @SequenceGenerator(name = "seq_categorias", sequenceName = "CAFETERIA_APP.SEQ_CATEGORIAS", allocationSize = 20)
     @Column(name = "ID")
     private Long id;
 
