@@ -13,10 +13,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SucursalController {
 
-    private final SucursalActivaRepository sucursalActivaRepository;
+    private final SucursalService sucursalService;
 
     @GetMapping
     public List<SucursalActiva> listar() {
-        return sucursalActivaRepository.findAll();
+        return sucursalService.listarActivas();
     }
 }

@@ -37,6 +37,9 @@ public class ClienteDataSourceConfig {
     @Value("${app.jpa.show-sql:false}")
     private boolean showSql;
 
+    @Value("${app.jpa.default-schema:CAFETERIA_APP}")
+    private String defaultSchema;
+
     @Bean
     @Primary
     @ConfigurationProperties("app.datasource.cliente")
@@ -56,7 +59,7 @@ public class ClienteDataSourceConfig {
                 "com.cafeteria.api.pedido");
         emf.setPersistenceUnitName("cliente");
         emf.setJpaVendorAdapter(vendorAdapter(showSql));
-        emf.setJpaProperties(jpaProperties(showSql));
+        emf.setJpaProperties(jpaProperties(showSql, defaultSchema));
         return emf;
     }
 
@@ -73,11 +76,16 @@ public class ClienteDataSourceConfig {
         return adapter;
     }
 
-    static Properties jpaProperties(boolean showSql) {
+    static Properties jpaProperties(boolean showSql, String defaultSchema) {
         var props = new Properties();
-        // Las tablas/vistas viven en el esquema CAFETERIA_APP
-        props.put("hibernate.default_schema", "CAFETERIA_APP");
+        props.put("hibernate.default_schema", defaultSchema);
         props.put("hibernate.format_sql", String.valueOf(showSql));
+        // Agrupa los INSERT/UPDATE del mismo tipo en un solo round-trip JDBC
+        // (por ejemplo, las filas de DETALLE_PEDIDO de un mismo pedido) en
+        // vez de uno por fila. No cambia cómo se generan los IDs.
+        props.put("hibernate.jdbc.batch_size", "20");
+        props.put("hibernate.order_inserts", "true");
+        props.put("hibernate.order_updates", "true");
         return props;
     }
 }

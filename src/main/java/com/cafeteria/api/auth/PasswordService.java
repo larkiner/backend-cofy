@@ -32,6 +32,8 @@ public class PasswordService {
                 .orElseThrow(CredencialService::credencialesInvalidas);
         credencialService.verificarPassword(request.passwordActual(), creds);
 
+        PoliticaPassword.validar(request.passwordNueva());
+
         String nuevoHash = passwordEncoder.encode(request.passwordNueva());
 
         if (CredencialService.ROL_CLIENTE.equals(creds.rol())) {

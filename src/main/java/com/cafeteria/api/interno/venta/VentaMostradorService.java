@@ -18,6 +18,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Venta de mostrador: el cliente llega a la sucursal, el personal
@@ -43,14 +46,25 @@ public class VentaMostradorService {
     public VentaMostradorResponse crear(String emailEmpleado, VentaMostradorRequest request) {
         Long sucursalId = sucursalDelEmpleado(emailEmpleado);
 
+        // Una sola consulta para todos los ítems (en vez de una por ítem):
+        // el precio se sigue releyendo siempre del inventario en la BD, solo
+        // que en lote.
+        List<Long> productoIds = request.items().stream()
+                .map(ItemVentaRequest::productoId)
+                .distinct()
+                .toList();
+        Map<Long, Producto> productosPorId = productoRepository.findAllById(productoIds).stream()
+                .collect(Collectors.toMap(Producto::getId, Function.identity()));
+
         BigDecimal total = BigDecimal.ZERO;
         var detalles = new ArrayList<DetallePedidoVenta>();
 
         for (ItemVentaRequest item : request.items()) {
-            // El precio SIEMPRE se toma del inventario en la BD, nunca del request.
-            Producto producto = productoRepository.findById(item.productoId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "El producto " + item.productoId() + " no existe"));
+            Producto producto = productosPorId.get(item.productoId());
+            if (producto == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "El producto " + item.productoId() + " no existe");
+            }
             if (!"S".equals(producto.getDisponible())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "El producto " + producto.getNombre() + " no está disponible");

@@ -4,6 +4,7 @@ import com.cafeteria.api.pedido.dto.CrearPedidoRequest;
 import com.cafeteria.api.pedido.dto.PagoRequest;
 import com.cafeteria.api.pedido.dto.PedidoCreadoResponse;
 import com.cafeteria.api.pedido.dto.PedidoDetalleResponse;
+import com.cafeteria.api.pedido.dto.StripePaymentIntentResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -52,6 +53,12 @@ public class PedidoController {
     public void pagar(Authentication auth, @PathVariable Long id,
                       @Valid @RequestBody PagoRequest request) {
         pedidoService.pagar(auth.getName(), id, request.metodo());
+    }
+
+    /** Crea o recupera el PaymentIntent asociado al pedido del cliente. */
+    @PostMapping("/{id}/pago/stripe")
+    public StripePaymentIntentResponse iniciarPagoStripe(Authentication auth, @PathVariable Long id) {
+        return pedidoService.iniciarPagoStripe(auth.getName(), id);
     }
 
     /** Simula la confirmación de la pasarela: devuelve el pedido con su código. */
