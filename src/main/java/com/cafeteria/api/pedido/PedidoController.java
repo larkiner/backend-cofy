@@ -43,6 +43,12 @@ public class PedidoController {
         return pedidoService.misPedidos(auth.getName());
     }
 
+    /** Historial de compras: solo los pedidos que el cliente llegó a pagar. */
+    @GetMapping("/historial")
+    public List<PedidoClienteVista> historial(Authentication auth) {
+        return pedidoService.historialCompras(auth.getName());
+    }
+
     @GetMapping("/{id}")
     public PedidoDetalleResponse detalle(Authentication auth, @PathVariable Long id) {
         return pedidoService.detalle(auth.getName(), id);

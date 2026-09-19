@@ -165,6 +165,17 @@ public class PedidoService {
                 .findByClienteIdOrderByFechaPedidoDesc(clienteIdDe(emailCliente));
     }
 
+    /**
+     * Historial de compras del cliente: solo los pedidos que llegó a pagar
+     * (se excluyen los que quedaron en PENDIENTE_PAGO).
+     */
+    @Transactional(value = "clienteTransactionManager", readOnly = true)
+    public List<PedidoClienteVista> historialCompras(String emailCliente) {
+        return pedidoClienteVistaRepository
+                .findByClienteIdAndEstadoNotOrderByFechaPedidoDesc(
+                        clienteIdDe(emailCliente), "PENDIENTE_PAGO");
+    }
+
     @Transactional(value = "clienteTransactionManager", readOnly = true)
     public PedidoDetalleResponse detalle(String emailCliente, Long pedidoId) {
         PedidoClienteVista pedido = pedidoDelCliente(emailCliente, pedidoId);
