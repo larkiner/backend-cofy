@@ -1,6 +1,8 @@
 package com.cafeteria.api.menu;
 
+import com.cafeteria.api.config.CatalogoCacheControl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,14 +20,15 @@ import java.util.List;
 public class MenuController {
 
     private final MenuService menuService;
+    private final CatalogoCacheControl catalogoCacheControl;
 
     @GetMapping
-    public List<MenuItem> listarMenu() {
-        return menuService.obtenerMenu();
+    public ResponseEntity<List<MenuItem>> listarMenu() {
+        return catalogoCacheControl.ok(menuService.obtenerMenu());
     }
 
     @GetMapping("/categoria/{categoriaId}")
-    public List<MenuItem> listarPorCategoria(@PathVariable Long categoriaId) {
-        return menuService.obtenerMenuPorCategoria(categoriaId);
+    public ResponseEntity<List<MenuItem>> listarPorCategoria(@PathVariable Long categoriaId) {
+        return catalogoCacheControl.ok(menuService.obtenerMenuPorCategoria(categoriaId));
     }
 }

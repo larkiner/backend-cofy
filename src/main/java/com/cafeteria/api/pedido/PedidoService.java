@@ -28,6 +28,7 @@ public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
     private final DetallePedidoRepository detallePedidoRepository;
+    private final DetallePedidoVistaRepository detallePedidoVistaRepository;
     private final PagoRepository pagoRepository;
     private final PedidoClienteVistaRepository pedidoClienteVistaRepository;
     private final MenuRepository menuRepository;
@@ -180,7 +181,7 @@ public class PedidoService {
     public PedidoDetalleResponse detalle(String emailCliente, Long pedidoId) {
         PedidoClienteVista pedido = pedidoDelCliente(emailCliente, pedidoId);
         return new PedidoDetalleResponse(pedido,
-                detallePedidoRepository.findByPedidoId(pedidoId));
+                detallePedidoVistaRepository.findByPedidoIdOrderById(pedidoId));
     }
 
     // ------------------------------------------------------------
