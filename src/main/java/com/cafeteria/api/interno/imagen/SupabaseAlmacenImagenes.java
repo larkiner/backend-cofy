@@ -2,6 +2,7 @@ package com.cafeteria.api.interno.imagen;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -28,10 +29,20 @@ public class SupabaseAlmacenImagenes implements AlmacenImagenes {
     private final String claveServicio;
     private final String bucket;
 
-    public SupabaseAlmacenImagenes(RestClient.Builder builder,
-                                   @Value("${app.supabase.url:}") String url,
+    /**
+     * Constructor de Spring. No se inyecta un {@code RestClient.Builder}: en
+     * Spring Boot 4 ese bean no se crea solo con el starter web actual, y su
+     * ausencia impedía arrancar la API.
+     */
+    @Autowired
+    public SupabaseAlmacenImagenes(@Value("${app.supabase.url:}") String url,
                                    @Value("${app.supabase.service-key:}") String claveServicio,
                                    @Value("${app.supabase.bucket:imagenes}") String bucket) {
+        this(RestClient.builder(), url, claveServicio, bucket);
+    }
+
+    /** Para pruebas: permite enlazar un servidor simulado al builder. */
+    SupabaseAlmacenImagenes(RestClient.Builder builder, String url, String claveServicio, String bucket) {
         this.http = builder.build();
         this.baseUrl = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
         this.claveServicio = claveServicio;
