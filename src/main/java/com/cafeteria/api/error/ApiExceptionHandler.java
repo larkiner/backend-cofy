@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -52,6 +53,13 @@ public class ApiExceptionHandler {
                 .map(fe -> new ErrorResponse.CampoError(fe.getField(), fe.getDefaultMessage()))
                 .toList();
         return construir(HttpStatus.BAD_REQUEST, "Datos de entrada no válidos", request, errores);
+    }
+
+    /** Archivo por encima del límite de multipart: Spring lo corta antes del controller. */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> manejarArchivoGrande(
+            MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        return construir(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo pesa más de 5 MB.", request, null);
     }
 
     private ResponseEntity<ErrorResponse> construir(HttpStatus status, String mensaje,

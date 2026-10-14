@@ -78,8 +78,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/menu/**", "/api/auth/**", "/api/sucursales/**").permitAll()
                 // ---------- Clientes ----------
                 .requestMatchers("/api/clientes/**", "/api/pedidos/**").hasRole("CLIENTE")
-                // ---------- Solo ADMIN: inventario ----------
-                .requestMatchers("/api/interno/productos/**", "/api/interno/categorias/**").hasRole("ADMIN")
+                // ---------- Solo ADMIN: inventario (y subida de las fotos de producto) ----------
+                .requestMatchers("/api/interno/productos/**", "/api/interno/categorias/**",
+                        "/api/interno/imagenes/**").hasRole("ADMIN")
                 // ---------- Solo ADMIN: alta de personal ----------
                 .requestMatchers(HttpMethod.POST, "/api/interno/trabajadores").hasRole("ADMIN")
                 // ---------- Supervisor/Admin: métricas, directorio y asignación de turnos ----------

@@ -79,7 +79,7 @@ En ambos casos, un trigger de Oracle (`TRG_PAGOS_APROBADO`) — no código de la
 
 - `auth/` — login, registro, emisión/validación de JWT (cruza ambos datasources)
 - `menu/`, `cliente/`, `sucursal/`, `pedido/` — dominio de cara al cliente, `clienteDataSource`
-- `interno/pedido/`, `interno/venta/`, `interno/producto/`, `interno/trabajador/`, `interno/turno/`, `interno/metrica/`, `interno/sucursal/` — dominio de cara al personal, `empleadoDataSource`
+- `interno/pedido/`, `interno/venta/`, `interno/producto/`, `interno/imagen/` (subida de fotos a Supabase Storage, sin Oracle), `interno/trabajador/`, `interno/turno/`, `interno/metrica/`, `interno/sucursal/` — dominio de cara al personal, `empleadoDataSource`
 - `config/` — las dos configuraciones de datasource más `SecurityConfig`
 
 ### Convenciones
